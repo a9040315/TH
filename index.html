@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🇹🇭🐘 泰國之旅 (大手牽小手) ✈️💖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+            "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+        }
+    }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@400;700&display=swap');
+        :root { --th-blue: #00247D; --th-red: #ED1C24; --jp-cream: #FAF7F0; --jp-charcoal: #333333; --jp-bamboo: #7F9A65; --th-gold: #D4AF37; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: var(--jp-cream); color: var(--jp-charcoal); }
+        h1, .serif-font { font-family: 'Noto Serif TC', serif; }
+        .header-cell { background-color: var(--th-blue); color: white; padding: 12px; position: sticky; top: 0; z-index: 10; font-size: 0.85rem; }
+        .tab-btn { padding: 12px 24px; font-weight: 600; cursor: pointer; transition: 0.3s; border-bottom: 3px solid transparent; }
+        .active-tab { color: var(--th-blue); border-bottom: 3px solid var(--th-blue); }
+        .elephant-icon { font-size: 1.5em; vertical-align: middle; margin-left: 8px; }
+    </style>
+</head>
+<body class="p-2 sm:p-8">
+    <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden border border-stone-200">
+        <header class="p-6 bg-[var(--th-blue)] text-white text-center sm:text-left border-b-4 border-[var(--th-gold)]">
+            <h1 class="text-2xl sm:text-3xl font-bold serif-font tracking-widest text-white flex items-center justify-center sm:justify-start">
+                🇹🇭<span class="elephant-icon">🐘</span> 泰國之旅 <span class="ml-2">✈️💖</span>
+            </h1>
+            <div class="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
+                <span id="syncStatus" class="text-xs bg-white/20 px-3 py-1 rounded-full text-red-200 text-center">🔴 嘗試連線雲端...</span>
+                <span class="text-[10px] opacity-70 font-mono">Firebase: together-fd9a8</span>
+            </div>
+        </header>
+
+        <div class="flex bg-stone-100 border-b overflow-x-auto">
+            <div onclick="switchPage('itinerary')" id="tab-itinerary" class="tab-btn active-tab whitespace-nowrap">📅 行程與交通</div>
+            <div onclick="switchPage('split')" id="tab-split" class="tab-btn whitespace-nowrap">💰 四人分帳 (台幣結算)</div>
+        </div>
+
+        <div id="itinerary-page" class="p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <button onclick="addRow()" class="w-full sm:w-auto bg-[var(--th-blue)] text-white px-6 py-2 rounded-lg hover:opacity-90 shadow-md">+ 新增泰國行程</button>
+                <div class="text-sm font-bold text-stone-600 bg-stone-50 px-4 py-2 rounded-full border border-stone-200">
+                    匯率: 1 THB = <input type="number" id="rateInput" step="0.001" class="w-16 border-b border-stone-400 text-center" onchange="updateRate(this.value)"> TWD
+                </div>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-stone-200">
+                <table class="w-full text-left border-collapse min-w-[850px]">
+                    <thead>
+                        <tr>
+                            <th class="header-cell w-24 text-center">時間</th>                         
+                            <th class="header-cell w-40">地點/活動</th>
+                            <th class="header-cell w-32">交通</th>
+                            <th class="header-cell w-32">地圖</th>
+                            <th class="header-cell w-28 text-right">預算(THB)</th>
+                            <th class="header-cell">備註</th>
+                            <th class="header-cell w-10 text-center">✕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itineraryBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="split-page" class="p-4 sm:p-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-stone-50 p-6 rounded-xl border border-stone-200">
+                    <h2 class="text-xl font-bold mb-4 serif-font text-[var(--th-blue)]">💸 記一筆支出</h2>
+                    <div class="space-y-4">
+                        <input type="text" id="expName" placeholder="支出項目" class="w-full p-2 border rounded bg-white">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input type="number" id="expAmount" placeholder="金額" class="w-full p-2 border rounded bg-white">
+                            <select id="expCurrency" class="w-full p-2 border rounded bg-white font-bold text-blue-600">
+                                <option value="THB">泰幣 (THB)</option>
+                                <option value="TWD">台幣 (TWD)</option>
+                            </select>
+                            <select id="expPayer" class="w-full p-2 border rounded bg-white font-bold">
+                                <option value="WEN">WEN</option>
+                                <option value="Ruby">Ruby</option>
+                                <option value="安安">安安</option>
+                                <option value="布布">布布</option>
+                            </select>
+                        </div>
+                        <button onclick="addExpense()" class="w-full bg-[var(--jp-bamboo)] text-white py-2 rounded-lg font-bold shadow-md">加入共同帳單</button>
+                    </div>
+                    <div class="mt-8">
+                        <h3 class="font-bold mb-2 border-b pb-1 text-sm text-stone-500 text-center">支出明細</h3>
+                        <div id="expenseHistory" class="text-sm space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border-2 border-[var(--th-blue)] shadow-lg">
+                    <h2 class="text-xl font-bold mb-4 serif-font text-[var(--th-blue)]">📊 四人結算 (統一台幣結帳)</h2>
+                    <div id="settlementReport" class="space-y-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getDatabase, ref, set, onValue } from "firebase/database";
+
+        const firebaseConfig = {
+            databaseURL: "https://together-fd9a8-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "together-fd9a8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const travelRef = ref(db, 'thailand_trip_2026');
+
+        let travelData = { itinerary: [], expenses: [], rate: 0.95 };
+
+        onValue(travelRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                travelData = data;
+                if(!travelData.itinerary) travelData.itinerary = [];
+                if(!travelData.expenses) travelData.expenses = [];
+                document.getElementById('syncStatus').innerText = "🟢 雲端同步中";
+                renderTable();
+                renderExpenses();
+            }
+        });
+
+        function pushToCloud() { set(travelRef, travelData); }
+        window.updateRate = (v) => { travelData.rate = parseFloat(v); renderExpenses(); pushToCloud(); };
+
+        window.addRow = () => {
+            travelData.itinerary.push({ time: "09:00", trans: "🚗 Grab", location: "景點", mapUrl: "", amount: 0, notes: "" });
+            pushToCloud();
+        };
+
+        window.updateCell = (idx, field, val) => {
+            travelData.itinerary[idx][field] = field === 'amount' ? parseFloat(val) || 0 : val;
+            pushToCloud();
+        };
+
+        window.deleteRow = (idx) => { if(confirm("刪除行程？")) { travelData.itinerary.splice(idx, 1); pushToCloud(); } };
+
+        function renderTable() {
+            const tbody = document.getElementById('itineraryBody');
+            tbody.innerHTML = (travelData.itinerary || []).map((item, i) => `
+                <tr class="hover:bg-stone-50 border-b">
+                    <td class="p-2"><input type="time" value="${item.time}" onchange="updateCell(${i}, 'time', this.value)" class="text-xs"></td>
+                    <td class="p-2" contenteditable="true" onblur="updateCell(${i}, 'location', this.innerText)">${item.location}</td>
+                    <td class="p-2" contenteditable="true" onblur="updateCell(${i}, 'trans', this.innerText)">${item.trans}</td>
+                    <td class="p-2"><div contenteditable="true" class="text-[8px] truncate max-w-[80px]" onblur="updateCell(${i}, 'mapUrl', this.innerText)">${item.mapUrl || '連結'}</div></td>
+                    <td class="p-2 text-right"><input type="number" value="${item.amount}" class="text-right w-full" onblur="updateCell(${i}, 'amount', this.value)"></td>
+                    <td class="p-2 text-xs" contenteditable="true" onblur="updateCell(${i}, 'notes', this.innerText)">${item.notes}</td>
+                    <td class="p-2 text-center"><button onclick="deleteRow(${i})" class="text-gray-300">✕</button></td>
+                </tr>`).join('');
+            document.getElementById('rateInput').value = travelData.rate;
+        }
+
+        window.addExpense = () => {
+            const name = document.getElementById('expName').value;
+            const amt = parseFloat(document.getElementById('expAmount').value);
+            const cur = document.getElementById('expCurrency').value;
+            const payer = document.getElementById('expPayer').value;
+            if(!name || !amt) return alert("請輸入項目與金額");
+            travelData.expenses.push({ id: Date.now(), name, amt, cur, payer });
+            document.getElementById('expName').value = '';
+            document.getElementById('expAmount').value = '';
+            pushToCloud();
+        };
+
+        window.deleteExpense = (id) => { travelData.expenses = travelData.expenses.filter(e => e.id !== id); pushToCloud(); };
+
+        function renderExpenses() {
+            const historyDiv = document.getElementById('expenseHistory');
+            const reportDiv = document.getElementById('settlementReport');
+            const rate = travelData.rate || 0.95;
+            const members = ["WEN", "Ruby", "安安", "布布"];
+
+            historyDiv.innerHTML = (travelData.expenses || []).map(e => `
+                <div class="flex justify-between items-center bg-white p-2 rounded shadow-sm border">
+                    <span>${e.name} (${e.payer})</span>
+                    <div class="font-mono text-right">
+                        <span class="font-bold text-blue-600">${e.cur === 'THB' ? '฿' : 'NT$'}${e.amt}</span>
+                        <button onclick="deleteExpense(${e.id})" class="ml-2 text-gray-300">✕</button>
+                    </div>
+                </div>`).reverse().join('') || '無紀錄';
+
+            let paidTWDMap = { "WEN": 0, "Ruby": 0, "安安": 0, "布布": 0 };
+            (travelData.expenses || []).forEach(e => {
+                let valInTWD = e.cur === 'THB' ? e.amt * rate : e.amt; 
+                paidTWDMap[e.payer] += valInTWD;
+            });
+            
+            const totalTWD = Object.values(paidTWDMap).reduce((a, b) => a + b, 0);
+            const avgTWD = totalTWD / 4;
+
+            reportDiv.innerHTML = totalTWD === 0 ? '無資料' : `
+                <div class="grid grid-cols-2 gap-4 text-center">
+                    <div class="p-2 bg-stone-100 rounded">台幣總支出: $${totalTWD.toFixed(0)}</div>
+                    <div class="p-2 bg-stone-100 rounded font-bold text-blue-700">每人平分: $${avgTWD.toFixed(0)}</div>
+                </div>
+                <div class="space-y-3">
+                    ${members.map(m => {
+                        const diff = paidTWDMap[m] - avgTWD;
+                        return `
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <div><span class="font-bold">${m}</span><br><span class="text-[10px] text-gray-400">總付台幣 NT$ ${paidTWDMap[m].toFixed(0)}</span></div>
+                            <div class="text-right">
+                                <p class="text-lg font-bold ${diff >= 0 ? 'text-green-600' : 'text-red-500'}">${diff >= 0 ? '應收' : '應付'} NT$ ${Math.abs(diff).toFixed(0)}</p>
+                                <p class="text-[9px] opacity-60">約 ฿${Math.abs(diff / rate).toFixed(0)} THB</p>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+        }
+
+        window.switchPage = (p) => {
+            document.getElementById('itinerary-page').classList.toggle('hidden', p !== 'itinerary');
+            document.getElementById('split-page').classList.toggle('hidden', p !== 'split');
+            document.getElementById('tab-itinerary').classList.toggle('active-tab', p === 'itinerary');
+            document.getElementById('tab-split').classList.toggle('active-tab', p === 'split');
+        };
+    </script>
+</body>
+</html>
