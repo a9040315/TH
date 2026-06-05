@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -74,6 +73,7 @@
             <div onclick="switchPage('split')" id="tab-split" class="tab-btn whitespace-nowrap">💰 記帳與統計</div>
         </div>
 
+        <!-- 記帳與統計頁面 -->
         <div id="split-page" class="p-4 sm:p-8 hidden">
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
                 <div class="space-y-8">
@@ -154,11 +154,12 @@
                         <button onclick="addExpense()" class="w-full bg-[var(--jp-bamboo)] text-white py-4 rounded-2xl text-xl font-bold shadow-lg hover:brightness-95 active:scale-[0.98] transition-all">確認加入帳單</button>
                     </div>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center border-b-2 pb-2">
+                        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b-2 pb-2 gap-3">
                             <h3 class="font-bold text-xl text-stone-600">支出明細紀錄</h3>
-                            <div class="flex gap-3">
-                                <button onclick="copyLineReport()" class="bg-green-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-green-600 shadow-sm">📋 複製報表</button>
+                            <div class="flex flex-wrap gap-2">
+                                <select id="payerFilter" onchange="renderExpenses()" class="border-2 rounded-xl px-3 py-2 bg-white font-bold text-blue-700"></select>
                                 <select id="dateFilter" onchange="renderExpenses()" class="border-2 rounded-xl px-3 py-2 bg-white font-bold"></select>
+                                <button onclick="copyLineReport()" class="bg-green-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-green-600 shadow-sm">📋 複製報表</button>
                             </div>
                         </div>
                         <div id="expenseHistory" class="space-y-4 max-h-[800px] overflow-y-auto pr-2"></div>
@@ -181,6 +182,7 @@
             </div>
         </div>
 
+        <!-- 行程規劃頁面 -->
         <div id="itinerary-page" class="p-4 sm:p-8">
             <div class="flex flex-wrap justify-between items-end mb-8 gap-6">
                 <div class="flex gap-4">
@@ -228,6 +230,9 @@
         
         let travelData = { itinerary: [], expenses: [], rate: 0.95, members: ["Ruby", "Wen", "R代購", "W代購"], payers: ["Ruby", "Wen"] };
 
+        // 當天日期預設
+        document.getElementById('expDateInput').value = new Date().toISOString().split('T')[0];
+
         onValue(travelRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -236,7 +241,10 @@
                 if(!travelData.expenses) travelData.expenses = [];
                 if(!travelData.members) travelData.members = ["Ruby", "Wen", "R代購", "W代購"];
                 if(!travelData.payers) travelData.payers = ["Ruby", "Wen"];
+                if(!travelData.rate) travelData.rate = 0.95;
+                
                 document.getElementById('syncStatus').innerHTML = "🟢 雲端同步中";
+                document.getElementById('rateInput').value = travelData.rate;
                 renderAll();
             }
         });
@@ -244,6 +252,7 @@
         function pushToCloud() { set(travelRef, travelData); }
 
         function renderAll() {
+            updatePayerFilterOptions();
             updateDateFilterOptions();
             updateItineraryFilterOptions();
             renderConfigLists();
@@ -251,7 +260,23 @@
             renderExpenses();
         }
 
+        // 分頁切換
+        window.switchPage = (page) => {
+            if(page === 'itinerary') {
+                document.getElementById('itinerary-page').classList.remove('hidden');
+                document.getElementById('split-page').classList.add('hidden');
+                document.getElementById('tab-itinerary').classList.add('active-tab');
+                document.getElementById('tab-split').classList.remove('active-tab');
+            } else {
+                document.getElementById('split-page').classList.remove('hidden');
+                document.getElementById('itinerary-page').classList.add('hidden');
+                document.getElementById('tab-split').classList.add('active-tab');
+                document.getElementById('tab-itinerary').classList.remove('active-tab');
+            }
+        };
+
         window.toggleManager = () => document.getElementById('listManager').classList.toggle('hidden');
+        
         window.renderConfigLists = () => {
             document.getElementById('payerList').innerHTML = travelData.payers.map(p => `
                 <span class="bg-stone-100 px-4 py-2 rounded-xl flex items-center gap-2 font-bold">${p} <button onclick="removePayer('${p}')" class="text-red-400 text-xl">×</button></span>`).join('');
@@ -274,6 +299,16 @@
         window.removeTarget = (n) => { if(confirm(`確定刪除 ${n}？`)) { travelData.members = travelData.members.filter(m => m !== n); pushToCloud(); } };
         window.toggleCardField = () => document.getElementById('cardRewardSection').classList.toggle('hidden', document.getElementById('expMethod').value !== 'CARD');
         
+        // 即時匯率更新
+        window.updateRate = (val) => {
+            const r = parseFloat(val);
+            if(r > 0) {
+                travelData.rate = r;
+                pushToCloud();
+            }
+        };
+
+        // 新增帳目
         window.addExpense = () => {
             const date = document.getElementById('expDateInput').value;
             const name = document.getElementById('expName').value;
@@ -285,19 +320,145 @@
             const cardType = method === 'CARD' ? document.getElementById('expCardType').value : "現金";
             const rewardRate = method === 'CARD' ? parseFloat(document.getElementById('expRewardRate').value) || 0 : 0;
             const splitWith = Array.from(document.querySelectorAll('#splitCheckboxes input:checked')).map(i => i.value);
+            
             if(!name || !amtRaw || !date) return alert("⚠️ 請填寫完整日期、項目與金額！");
+            
             let amtTWD = currency === 'TWD' ? amtRaw : Math.round(amtRaw * travelData.rate);
             let rewardAmt = Math.round(amtTWD * (rewardRate / 100));
-            travelData.expenses.push({ id: Date.now(), date, name, amt: currency === 'THB' ? amtRaw : Math.round(amtRaw / travelData.rate), amtTWD, method, payer, splitWith, note: note || "", cardType, rewardRate, rewardAmt });
+            let amtTHB = currency === 'THB' ? amtRaw : Math.round(amtRaw / travelData.rate);
+            
+            travelData.expenses.push({ 
+                id: Date.now(), date, name, amt: amtTHB, amtTWD, method, payer, splitWith, note: note || "", cardType, rewardRate, rewardAmt 
+            });
             pushToCloud();
+            
+            document.getElementById('expName').value = '';
+            document.getElementById('expAmount').value = '';
+            document.getElementById('expNote').value = '';
         };
 
+        // 刪除單筆帳目
+        window.deleteExpense = (id) => {
+            if(confirm("確定要刪除這筆開銷紀錄嗎？")) {
+                travelData.expenses = travelData.expenses.filter(e => e.id !== id);
+                pushToCloud();
+            }
+        };
+
+        // 清空所有開銷
+        window.clearAllExpenses = () => {
+            if(confirm("⚠️ 警告：這將會完全清除所有的記帳與統計開銷，此操作無法復原！確定要清空嗎？")) {
+                travelData.expenses = [];
+                pushToCloud();
+            }
+        };
+
+        // 更新篩選下拉選單選項
+        function updatePayerFilterOptions() {
+            const filter = document.getElementById('payerFilter');
+            const curr = filter.value || 'all';
+            let html = '<option value="all">👤 所有付款人</option>';
+            travelData.payers.forEach(p => { html += `<option value="${p}">${p}</option>`; });
+            filter.innerHTML = html;
+            filter.value = curr;
+        }
+
+        function updateDateFilterOptions() {
+            const filter = document.getElementById('dateFilter');
+            const curr = filter.value || 'all';
+            let dates = [...new Set((travelData.expenses || []).map(e => e.date))].sort();
+            let html = '<option value="all">📅 所有日期</option>';
+            dates.forEach(d => { html += `<option value="${d}">${d}</option>`; });
+            filter.innerHTML = html;
+            filter.value = curr;
+        }
+
+        function updateItineraryFilterOptions() {
+            const filter = document.getElementById('itineraryDateFilter');
+            const curr = filter.value || 'all';
+            let dates = [...new Set((travelData.itinerary || []).map(it => it.date))].sort();
+            let html = '<option value="all">🌟 顯示全部行程</option>';
+            dates.forEach(d => { html += `<option value="${d}">${d}</option>`; });
+            filter.innerHTML = html;
+            filter.value = curr;
+        }
+
+        // 編輯與儲存模式切換控制
+        window.toggleEditMode = (btn, id) => {
+            const card = document.getElementById(`exp-card-${id}`);
+            const idx = travelData.expenses.findIndex(e => e.id === id);
+            if (idx === -1) return;
+
+            if (!card.classList.contains('is-editing')) {
+                // 進入編輯模式
+                card.classList.add('is-editing');
+                btn.innerText = "💾";
+                card.querySelectorAll('.split-checkbox').forEach(cb => cb.removeAttribute('disabled'));
+                card.querySelectorAll('.editable-content').forEach(el => el.setAttribute('contenteditable', 'true'));
+                
+                // 如果原本沒有備註，顯示一個空的備註欄位供使用者點擊編輯
+                const noteBlock = card.querySelector('.note-block');
+                if (noteBlock.classList.contains('hidden')) {
+                    noteBlock.classList.remove('hidden');
+                }
+            } else {
+                // 儲存並退出編輯模式
+                const name = card.querySelector('.name-val').innerText.trim();
+                const date = card.querySelector('.date-val').innerText.trim();
+                const amtTHB = parseFloat(card.querySelector('.thb-val').innerText.replace(/[^\d.]/g, '')) || 0;
+                const amtTWD = parseFloat(card.querySelector('.twd-val').innerText.replace(/[^\d.]/g, '')) || 0;
+                const rewardRate = parseFloat(card.querySelector('.reward-rate-val').innerText.trim()) || 0;
+                const note = card.querySelector('.note-val').innerText.trim();
+                
+                const splitWith = [];
+                card.querySelectorAll('.split-checkbox:checked').forEach(cb => {
+                    splitWith.push(cb.value);
+                });
+
+                const rewardAmt = Math.round(amtTWD * (rewardRate / 100));
+
+                travelData.expenses[idx].name = name;
+                travelData.expenses[idx].date = date;
+                travelData.expenses[idx].amt = amtTHB;
+                travelData.expenses[idx].amtTWD = amtTWD;
+                travelData.expenses[idx].rewardRate = rewardRate;
+                travelData.expenses[idx].rewardAmt = rewardAmt;
+                travelData.expenses[idx].splitWith = splitWith;
+                travelData.expenses[idx].note = note;
+
+                pushToCloud();
+            }
+        };
+
+        window.toggleSplitMember = (id, member) => {
+            const idx = travelData.expenses.findIndex(e => e.id === id);
+            if (idx !== -1) {
+                if(!travelData.expenses[idx].splitWith) travelData.expenses[idx].splitWith = [];
+                let split = travelData.expenses[idx].splitWith;
+                if (split.includes(member)) {
+                    travelData.expenses[idx].splitWith = split.filter(m => m !== member);
+                } else {
+                    travelData.expenses[idx].splitWith.push(member);
+                }
+            }
+        };
+
+        // 渲染記帳清單 (已補上備註與即時編輯功能)
         window.renderExpenses = () => {
             const historyDiv = document.getElementById('expenseHistory');
-            const filterDate = document.getElementById('dateFilter').value;
+            const filterDate = document.getElementById('dateFilter').value || 'all';
+            const filterPayer = document.getElementById('payerFilter').value || 'all';
             const exps = travelData.expenses || [];
-            const filtered = filterDate === 'all' ? exps : exps.filter(e => e.date === filterDate);
-            const sorted = filtered.sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            let filtered = exps;
+            if (filterDate !== 'all') {
+                filtered = filtered.filter(e => e.date === filterDate);
+            }
+            if (filterPayer !== 'all') {
+                filtered = filtered.filter(e => e.payer === filterPayer);
+            }
+            
+            const sorted = filtered.sort((a,b) => b.date.localeCompare(a.date) || b.id - a.id);
             historyDiv.innerHTML = sorted.map(e => `
                 <div id="exp-card-${e.id}" class="bg-white p-6 rounded-2xl shadow-md border border-stone-200 text-lg mb-4">
                     <div class="flex justify-between items-start mb-4">
@@ -314,35 +475,40 @@
                         <div>泰銖 ฿ <span class="editable-content thb-val text-2xl font-mono">${e.amt}</span></div>
                         <div class="text-blue-600 text-right">台幣 $ <span class="editable-content twd-val text-2xl font-mono">${e.amtTWD}</span></div>
                         <div class="text-stone-500 col-span-2 border-t pt-4 mt-2">
-                            💳 ${e.cardType} (<span class="editable-content reward-rate-val">${e.rewardRate}</span>%) 
-                            <span class="ml-4 text-green-600">回饋: $<span class="editable-content reward-amt-val">${e.rewardAmt}</span></span>
+                            臨時卡刷：${e.cardType} (<span class="editable-content reward-rate-val">${e.rewardRate}</span>%) 
+                            <span class="ml-4 text-green-600">回饋省下: $<span class="reward-amt-val">${e.rewardAmt || 0}</span></span>
                         </div>
                         <div class="col-span-2 italic text-stone-500 border-t pt-4 flex flex-wrap gap-4 items-center">
                             分帳對象：
                             ${travelData.members.map(m => `
                                 <label class="flex items-center gap-2 bg-white px-3 py-1 rounded-lg border ${m.includes('代購')?'text-orange-500 border-orange-100':'border-stone-200'}">
-                                    <input type="checkbox" class="split-checkbox" disabled ${(e.splitWith||[]).includes(m)?'checked':''} onclick="toggleSplitMember(${e.id}, '${m}')"> <span>${m}</span>
+                                    <input type="checkbox" value="${m}" class="split-checkbox" disabled ${(e.splitWith||[]).includes(m)?'checked':''} onclick="toggleSplitMember(${e.id}, '${m}')"> <span>${m}</span>
                                 </label>`).join('')}
                         </div>
+                    </div>
+                    <!-- 💡 備註顯示與編輯區塊 -->
+                    <div class="note-block mt-4 text-stone-600 text-base italic pl-2 border-l-4 border-amber-300 ${e.note ? '' : 'hidden'}">
+                        <span>💡 備註：</span><span class="editable-content note-val font-normal not-italic">${e.note || ""}</span>
                     </div>
                 </div>`).join('');
             calculateSettlement();
         };
 
+        // 核心計算結算邏輯
         window.calculateSettlement = () => {
             let totalGroupTwd = 0; let totalRewardSaved = 0; 
-            let paidMap = {};      // 各付款人實際刷卡/付出的台幣(含代購)
-            let rewardMap = {};    // 各付款人獲得的信用卡回饋金額
-            let personalAllMap = {}; // 個人花費 (含應負公費及專屬分帳)
-            let groupShareMap = {};  // 個人應負團費 (僅計算不含代購標籤的公費分帳)
-            let personalBuyMap = {}; // 個人代購支出
+            let paidMap = {};      
+            let rewardMap = {};    
+            let personalAllMap = {}; 
+            let groupShareMap = {};  
+            let personalBuyMap = {}; 
             
             travelData.members.forEach(m => { personalAllMap[m] = 0; groupShareMap[m] = 0; personalBuyMap[m] = 0; });
             travelData.payers.forEach(p => { paidMap[p] = 0; rewardMap[p] = 0; });
             
             travelData.expenses.forEach(e => {
                 const reward = e.rewardAmt || 0; 
-                const netTwd = e.amtTWD - reward; // 扣除回饋後的實際支出
+                const netTwd = e.amtTWD - reward; 
                 const splitWith = e.splitWith || [];
                 const isPersonalAgent = splitWith.some(m => m.includes('代購'));
                 
@@ -354,16 +520,12 @@
                 const sharePerPerson = netTwd / splitWith.length;
                 
                 splitWith.forEach(m => {
-                    // 1. 個人花費 (只要有勾選就算，不管是不是代購)
                     personalAllMap[m] = (personalAllMap[m] || 0) + sharePerPerson;
                     
                     if (m.includes('代購')) {
-                        // 4. 個人代購支出
                         personalBuyMap[m] = (personalBuyMap[m] || 0) + sharePerPerson;
                     } else {
-                        // 2. 個人應負團費 (計算非代購的成員分帳)
                         groupShareMap[m] = (groupShareMap[m] || 0) + sharePerPerson;
-                        // 計算總團費統計 (不含代購標籤項目)
                         if (!isPersonalAgent) totalGroupTwd += sharePerPerson;
                     }
                 });
@@ -376,7 +538,6 @@
             statsDiv.innerHTML = travelData.payers.map(p => {
                 const purePaid = (paidMap[p] || 0) - (rewardMap[p] || 0);
                 const pBuy = personalBuyMap[p+'代購'] || 0;
-                // 結算金額 = 實際代墊(扣回饋) - (個人應負團費 + 個人代購支出)
                 const balance = purePaid - groupShareMap[p] - pBuy;
                 
                 return `
@@ -387,19 +548,19 @@
                     </div>
                     <div class="grid grid-cols-1 gap-2 text-lg font-medium">
                         <div class="flex justify-between">
-                            <span class="text-blue-700">1. 個人花費 (含應負及專屬):</span> 
+                            <span class="text-blue-700">1. 個人總負擔 (含應負及專屬):</span> 
                             <span class="font-bold text-blue-700">$${Math.round(personalAllMap[p] + pBuy).toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-stone-500">2. 個人應負團費:</span> 
+                            <span class="text-stone-500">2. 個人應負團費分攤:</span> 
                             <span>$${Math.round(groupShareMap[p]).toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-stone-700">3. 個人代墊(扣回饋):</span> 
+                            <span class="text-stone-700">3. 實際代墊出資(扣回饋):</span> 
                             <span class="font-bold text-stone-700">$${Math.round(purePaid).toLocaleString()}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-orange-600">4. 個人代購支出:</span> 
+                            <span class="text-orange-600">4. 專屬個人代購支出:</span> 
                             <span class="text-orange-600">$${Math.round(pBuy).toLocaleString()}</span>
                         </div>
                     </div>
@@ -418,13 +579,88 @@
             finalDiv.innerHTML = settlementHTML + `</div></div>`;
         };
 
-        window.copyLineReport = () => { alert("功能開發中"); };
-        window.addRow = () => { const d = new Date().toISOString().split('T')[0]; travelData.itinerary.push({ date: d, time: "09:00", trans: "🚶", location: "地點名稱", mapUrl: "", amount: 0 }); pushToCloud(); };
-        window.updateCell = (idx, f, v) => { travelData.itinerary[idx][f] = f === 'amount' ? parseFloat(v) || 0 : v; pushToCloud(); };
+        // LINE 文字報表輸出
+        window.copyLineReport = () => {
+            let text = `🧸 泰國之旅 費用結算報表 ✈️💖\n`;
+            text += `=========================\n`;
+            
+            let totalGroupTwd = 0;
+            let paidMap = {}; let rewardMap = {};
+            let groupShareMap = {}; let personalBuyMap = {};
+            
+            travelData.members.forEach(m => { groupShareMap[m] = 0; personalBuyMap[m] = 0; });
+            travelData.payers.forEach(p => { paidMap[p] = 0; rewardMap[p] = 0; });
+            
+            travelData.expenses.forEach(e => {
+                const reward = e.rewardAmt || 0;
+                const netTwd = e.amtTWD - reward;
+                const splitWith = e.splitWith || [];
+                const isPersonalAgent = splitWith.some(m => m.includes('代購'));
+                
+                paidMap[e.payer] = (paidMap[e.payer] || 0) + e.amtTWD;
+                rewardMap[e.payer] = (rewardMap[e.payer] || 0) + reward;
+                
+                if(splitWith.length > 0) {
+                    const share = netTwd / splitWith.length;
+                    splitWith.forEach(m => {
+                        if(m.includes('代購')) {
+                            personalBuyMap[m] = (personalBuyMap[m] || 0) + share;
+                        } else {
+                            groupShareMap[m] = (groupShareMap[m] || 0) + share;
+                            if(!isPersonalAgent) totalGroupTwd += share;
+                        }
+                    });
+                }
+            });
+            
+            text += `🌍 總公費團費：$${Math.round(totalGroupTwd).toLocaleString()} TWD\n\n`;
+            text += `💰【最終結算結果】\n`;
+            travelData.payers.forEach(p => {
+                const purePaid = (paidMap[p]||0) - (rewardMap[p]||0);
+                const pBuy = personalBuyMap[p+'代購'] || 0;
+                const bal = Math.round(purePaid - groupShareMap[p] - pBuy);
+                text += ` 👤 ${p} ➜ ${bal >= 0 ? '【應收】' : '【應付】'} $${Math.abs(bal).toLocaleString()} TWD\n`;
+            });
+            
+            text += `\n📝【詳細帳目明細】\n`;
+            const sortedExps = [...travelData.expenses].sort((a,b) => a.date.localeCompare(b.date));
+            sortedExps.forEach(e => {
+                text += ` ▪️ [${e.date}] ${e.name} : ฿${e.amt} (約$${e.amtTWD} TWD) -> 由 ${e.payer} 支付\n`;
+                text += `   分攤對象: ${(e.splitWith || []).join(', ')}\n`;
+                if(e.note) text += `   💡 備註: ${e.note}\n`;
+            });
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert("📋 報表已成功複製到剪貼簿，趕快去 LINE 貼上吧！");
+            }).catch(err => {
+                alert("複製失敗，請再試一次。");
+            });
+        };
+
+        // 行程規劃功能區
+        window.addRow = () => { 
+            const d = new Date().toISOString().split('T')[0]; 
+            travelData.itinerary.push({ date: d, time: "09:00", trans: "🚶", location: "新景點名稱", mapUrl: "", amount: 0 }); 
+            pushToCloud(); 
+        };
+        
+        window.updateCell = (idx, f, v) => { 
+            travelData.itinerary[idx][f] = f === 'amount' ? parseFloat(v) || 0 : v; 
+            pushToCloud(); 
+        };
+
+        window.deleteItinerary = (idx) => {
+            if(confirm("確定刪除此行程節點？")) {
+                travelData.itinerary.splice(idx, 1);
+                pushToCloud();
+            }
+        };
+        
         window.renderTable = () => {
-            const fv = document.getElementById('itineraryDateFilter').value;
+            const fv = document.getElementById('itineraryDateFilter').value || 'all';
             let items = travelData.itinerary.map((it, i) => ({...it, i})).sort((a,b)=>a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-            if(fv !== 'all') items = items.filter(it => it.date === fv);
+            if(fv !== 'all' && fv !== '') items = items.filter(it => it.date === fv);
+            
             document.getElementById('itineraryBody').innerHTML = items.map(it => `
                 <tr class="hover:bg-stone-50 border-b-2 text-lg font-medium">
                     <td class="p-4"><input type="date" value="${it.date}" onchange="updateCell(${it.i}, 'date', this.value)" class="date-input-table"></td>
@@ -433,64 +669,10 @@
                     <td class="p-4" contenteditable="true" onblur="updateCell(${it.i}, 'trans', this.innerText)">${it.trans}</td>
                     <td class="p-4 text-blue-500 truncate max-w-[200px]" contenteditable="true" onblur="updateCell(${it.i}, 'mapUrl', this.innerText)">${it.mapUrl || '貼上連結'}</td>
                     <td class="p-4 text-right"><input type="number" value="${it.amount}" class="text-right w-24 bg-transparent font-black" onblur="updateCell(${it.i}, 'amount', this.value)"></td>
-                    <td class="p-4 text-center"><button onclick="deleteRow(${it.i})" class="text-stone-300 hover:text-red-400">✕</button></td>
+                    <td class="p-4 text-center"><button onclick="deleteItinerary(${it.i})" class="text-red-400 text-xl font-bold hover:scale-110 transition-transform">×</button></td>
                 </tr>`).join('');
-            document.getElementById('rateInput').value = travelData.rate;
         };
-
-        window.deleteRow = (i) => { if(confirm("確定刪除此行程？")) { travelData.itinerary.splice(i, 1); pushToCloud(); } };
-        window.deleteExpense = (id) => { if(confirm("確定刪除此筆支出？")) { travelData.expenses = travelData.expenses.filter(e => e.id !== id); pushToCloud(); } };
-        window.clearAllExpenses = () => { if(confirm("全清空？")) { travelData.expenses = []; pushToCloud(); } };
-        window.updateRate = (v) => { travelData.rate = parseFloat(v); pushToCloud(); };
-        window.switchPage = (p) => {
-            document.getElementById('itinerary-page').classList.toggle('hidden', p !== 'itinerary');
-            document.getElementById('split-page').classList.toggle('hidden', p !== 'split');
-            document.getElementById('tab-itinerary').classList.toggle('active-tab', p === 'itinerary');
-            document.getElementById('tab-split').classList.toggle('active-tab', p === 'split');
-        };
-
-        window.toggleEditMode = (btn, id) => {
-            const card = document.getElementById(`exp-card-${id}`);
-            const isEditing = card.classList.toggle('is-editing');
-            const checkboxes = card.querySelectorAll('.split-checkbox');
-            const f = { name: card.querySelector('.name-val'), date: card.querySelector('.date-val'), thb: card.querySelector('.thb-val'), twd: card.querySelector('.twd-val'), rwRate: card.querySelector('.reward-rate-val'), rwAmt: card.querySelector('.reward-amt-val') };
-            if(isEditing) { btn.innerText = "✅"; Object.values(f).forEach(el => el.contentEditable = true); checkboxes.forEach(cb => cb.disabled = false); f.name.focus(); } 
-            else {
-                btn.innerText = "✏️"; Object.values(f).forEach(el => el.contentEditable = false); checkboxes.forEach(cb => cb.disabled = true);
-                const idx = travelData.expenses.findIndex(e => e.id === id);
-                if(idx !== -1) {
-                    travelData.expenses[idx].name = f.name.innerText; travelData.expenses[idx].date = f.date.innerText;
-                    travelData.expenses[idx].amt = parseFloat(f.thb.innerText) || 0; travelData.expenses[idx].amtTWD = parseFloat(f.twd.innerText) || 0;
-                    travelData.expenses[idx].rewardRate = parseFloat(f.rwRate.innerText) || 0; travelData.expenses[idx].rewardAmt = parseFloat(f.rwAmt.innerText) || 0;
-                    pushToCloud();
-                }
-            }
-        };
-
-        function updateDateFilterOptions() {
-            const filter = document.getElementById('dateFilter');
-            const currentVal = filter.value;
-            const dates = [...new Set(travelData.expenses.map(e => e.date))].sort();
-            filter.innerHTML = '<option value="all">📅 全部日期</option>' + dates.map(d => `<option value="${d}">${d}</option>`).join('');
-            filter.value = currentVal || 'all';
-        }
-
-        function updateItineraryFilterOptions() {
-            const filter = document.getElementById('itineraryDateFilter');
-            const currentVal = filter.value;
-            const dates = [...new Set(travelData.itinerary.map(it => it.date))].filter(d=>d).sort();
-            filter.innerHTML = '<option value="all">📅 顯示全部日期</option>' + dates.map(d => `<option value="${d}">${d}</option>`).join('');
-            filter.value = currentVal || 'all';
-        }
-
-        document.getElementById('expAmount').addEventListener('input', updateRewardPreview);
-        function updateRewardPreview() {
-            const amt = parseFloat(document.getElementById('expAmount').value) || 0;
-            const rate = parseFloat(document.getElementById('expRewardRate').value) || 0;
-            const curr = document.getElementById('expCurrency').value;
-            let twdAmt = curr === 'TWD' ? amt : amt * travelData.rate;
-            document.getElementById('rewardPreview').innerText = `預計回饋: $${Math.round(twdAmt * (rate / 100))}`;
-        }
     </script>
 </body>
 </html>
+
