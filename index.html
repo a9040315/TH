@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧸泰國之旅✈️💖 (大字清晰版)</title>
+    <title>🧸旅遊記帳與行程規劃✈️💖 (版面優化版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="importmap">
     {
@@ -14,7 +14,7 @@
     }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=400;500;700&family=Noto+Serif+TC:wght=400;700&display=swap');
         
         :root { 
             --jp-indigo: #3E517A; 
@@ -64,7 +64,7 @@
 <body class="p-2 sm:p-4">
     <div class="max-w-7xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden border border-stone-200">
         <header class="p-8 bg-[var(--jp-indigo)] text-white flex justify-between items-center">
-            <h1 class="text-3xl font-bold serif-font tracking-widest">🧸泰國之旅 ✈️💖</h1>
+            <h1 class="text-3xl font-bold serif-font tracking-widest">🧸旅遊小助手 ✈️💖</h1>
             <span id="syncStatus" class="bg-white/20 px-4 py-2 rounded-full text-red-200 font-bold">🔴 連線中...</span>
         </header>
 
@@ -73,8 +73,36 @@
             <div onclick="switchPage('split')" id="tab-split" class="tab-btn whitespace-nowrap">💰 記帳與統計</div>
         </div>
 
-        <!-- 記帳與統計頁面 -->
         <div id="split-page" class="p-4 sm:p-8 hidden">
+            <div class="mb-6 p-4 bg-stone-100 rounded-2xl border border-stone-200 flex flex-wrap items-center justify-between gap-4 text-lg font-bold">
+                <div class="flex items-center gap-2">
+                    <span>🌍 旅行主要幣別：</span>
+                    <select id="currencySelect" onchange="window.fetchLiveRate(this.value)" class="p-2 border rounded-xl bg-white font-bold text-indigo-800">
+                        <option value="THB">泰銖 ฿ (THB)</option>
+                        <option value="JPY">日圓 ¥ (JPY)</option>
+                        <option value="KRW">韓元 ₩ (KRW)</option>
+                        <option value="USD">美元 $ (USD)</option>
+                        <option value="EUR">歐元 € (EUR)</option>
+                        <option value="TWD">台幣 $ (TWD)</option>
+                        <option value="CNY">人民幣 ¥ (CNY)</option>
+                        <option value="HKD">港幣 $ (HKD)</option>
+                        <option value="SGD">新加坡幣 $ (SGD)</option>
+                        <option value="GBP">英鎊 £ (GBP)</option>
+                        <option value="AUD">澳幣 $ (AUD)</option>
+                        <option value="CAD">加幣 $ (CAD)</option>
+                        <option value="VND">越南盾 ₫ (VND)</option>
+                        <option value="PHP">菲律賓比索 ₱ (PHP)</option>
+                        <option value="MYR">馬來西亞林吉特 RM (MYR)</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <span>即時匯率：1 <span id="currentCurrencyLabel" class="text-indigo-800">THB</span> =</span>
+                    <input type="number" id="rateInput" step="0.0001" class="w-24 bg-white border rounded-xl px-2 py-1 text-center font-bold text-indigo-700 outline-none focus:border-indigo-500" oninput="window.updateRate(this.value)">
+                    <span class="text-stone-600">TWD</span>
+                    <button onclick="window.fetchLiveRate(document.getElementById('currencySelect').value)" class="ml-2 text-sm bg-white border-2 px-3 py-1 rounded-xl shadow-sm hover:bg-stone-50 transition-colors">🔄 刷新匯率</button>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
                 <div class="space-y-8">
                     <div class="bg-stone-50 p-8 rounded-2xl border border-stone-200 shadow-sm">
@@ -99,14 +127,14 @@
                             </div>
                             <div class="flex flex-col">
                                 <label class="text-sm font-bold text-stone-500 mb-1">項目</label>
-                                <input type="text" id="expName" placeholder="例如：泰式晚餐" class="p-3 border rounded-xl">
+                                <input type="text" id="expName" placeholder="例如：美味晚餐" class="p-3 border rounded-xl">
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-4 mb-4">
                             <div class="flex flex-col">
                                 <label class="text-sm font-bold text-stone-500 mb-1">幣別</label>
                                 <select id="expCurrency" class="p-3 border rounded-xl bg-white font-bold">
-                                    <option value="THB">泰幣 ฿</option>
+                                    <option value="FOREIGN">外幣 (依上方設定)</option>
                                     <option value="TWD">台幣 $</option>
                                 </select>
                             </div>
@@ -182,7 +210,6 @@
             </div>
         </div>
 
-        <!-- 行程規劃頁面 -->
         <div id="itinerary-page" class="p-4 sm:p-8">
             <div class="flex flex-wrap justify-between items-end mb-8 gap-6">
                 <div class="flex gap-4">
@@ -191,9 +218,6 @@
                         <label class="font-bold text-stone-400 mb-1 px-1">🔍 篩選日期</label>
                         <select id="itineraryDateFilter" onchange="renderTable()" class="p-3 border-2 rounded-xl bg-white font-bold text-indigo-700 min-w-[200px]"></select>
                     </div>
-                </div>
-                <div class="text-lg font-bold bg-stone-100 px-6 py-3 rounded-2xl border-2">
-                    即時匯率: 1 THB = <input type="number" id="rateInput" step="0.001" class="w-20 bg-transparent text-center border-b-2 border-stone-400 focus:border-indigo-500 outline-none" onchange="updateRate(this.value)"> TWD
                 </div>
             </div>
             
@@ -206,7 +230,7 @@
                             <th class="header-cell">地點項目</th>
                             <th class="header-cell w-32">交通方式</th>
                             <th class="header-cell">地圖/備註連結</th>
-                            <th class="header-cell text-right w-36">預算(฿)</th>
+                            <th class="header-cell text-right w-36">預算(<span class="currency-symbol">฿</span>)</th>
                             <th class="header-cell text-center w-20">操作</th>
                         </tr>
                     </thead>
@@ -228,9 +252,8 @@
         const db = getDatabase(app);
         const travelRef = ref(db, 'trips/thailand_trip_data');
         
-        let travelData = { itinerary: [], expenses: [], rate: 0.95, members: ["Ruby", "Wen", "R代購", "W代購"], payers: ["Ruby", "Wen"] };
+        let travelData = { itinerary: [], expenses: [], rate: 0.95, targetCurrency: "THB", members: ["Ruby", "Wen", "R代購", "W代購"], payers: ["Ruby", "Wen"] };
 
-        // 當天日期預設
         document.getElementById('expDateInput').value = new Date().toISOString().split('T')[0];
 
         onValue(travelRef, (snapshot) => {
@@ -242,14 +265,70 @@
                 if(!travelData.members) travelData.members = ["Ruby", "Wen", "R代購", "W代購"];
                 if(!travelData.payers) travelData.payers = ["Ruby", "Wen"];
                 if(!travelData.rate) travelData.rate = 0.95;
+                if(!travelData.targetCurrency) travelData.targetCurrency = "THB";
                 
                 document.getElementById('syncStatus').innerHTML = "🟢 雲端同步中";
                 document.getElementById('rateInput').value = travelData.rate;
+                document.getElementById('currencySelect').value = travelData.targetCurrency;
+                document.getElementById('currentCurrencyLabel').innerText = travelData.targetCurrency;
+                
+                window.updateCurrencySymbols(travelData.targetCurrency);
                 renderAll();
             }
         });
 
         function pushToCloud() { set(travelRef, travelData); }
+
+        window.fetchLiveRate = async (currencyCode) => {
+            try {
+                document.getElementById('syncStatus').innerHTML = "⏳ 正在獲取最新匯率...";
+                const res = await fetch(`https://open.er-api.com/v6/latest/${currencyCode}`);
+                const json = await res.json();
+                
+                if (json && json.rates && json.rates.TWD) {
+                    const twdRate = parseFloat(json.rates.TWD.toFixed(4));
+                    
+                    travelData.rate = twdRate;
+                    travelData.targetCurrency = currencyCode;
+                    document.getElementById('rateInput').value = twdRate;
+                    document.getElementById('currentCurrencyLabel').innerText = currencyCode;
+                    
+                    window.updateCurrencySymbols(currencyCode);
+                    pushToCloud();
+                } else {
+                    alert("匯率資料解析失敗，請手動輸入。");
+                }
+            } catch (error) {
+                console.error("無法更新即時匯率:", error);
+                alert("無法連線至即時匯率伺服器，請手動調整匯率。");
+                document.getElementById('syncStatus').innerHTML = "🟢 雲端同步中";
+            }
+        };
+
+        window.updateRate = (val) => {
+            const r = parseFloat(val);
+            if(r > 0) {
+                travelData.rate = r;
+                travelData.targetCurrency = document.getElementById('currencySelect').value;
+                pushToCloud();
+            }
+        };
+
+        window.updateCurrencySymbols = (code) => {
+            const symbols = { 
+                "THB": "฿", "JPY": "¥", "KRW": "₩", "USD": "$", "EUR": "€", 
+                "TWD": "$", "CNY": "¥", "HKD": "$", "SGD": "$", "GBP": "£", 
+                "AUD": "$", "CAD": "$", "VND": "₫", "PHP": "₱", "MYR": "RM" 
+            };
+            const sym = symbols[code] || code;
+            
+            document.querySelectorAll('.currency-symbol').forEach(el => el.innerText = sym);
+            
+            const foreignOption = document.querySelector("#expCurrency option[value='FOREIGN']");
+            if(foreignOption) {
+                foreignOption.innerText = `外幣 ${sym} (${code})`;
+            }
+        };
 
         function renderAll() {
             updatePayerFilterOptions();
@@ -298,15 +377,6 @@
         window.removePayer = (n) => { if(confirm(`確定刪除 ${n}？`)) { travelData.payers = travelData.payers.filter(p => p !== n); pushToCloud(); } };
         window.removeTarget = (n) => { if(confirm(`確定刪除 ${n}？`)) { travelData.members = travelData.members.filter(m => m !== n); pushToCloud(); } };
         window.toggleCardField = () => document.getElementById('cardRewardSection').classList.toggle('hidden', document.getElementById('expMethod').value !== 'CARD');
-        
-        // 即時匯率更新
-        window.updateRate = (val) => {
-            const r = parseFloat(val);
-            if(r > 0) {
-                travelData.rate = r;
-                pushToCloud();
-            }
-        };
 
         // 新增帳目
         window.addExpense = () => {
@@ -325,10 +395,10 @@
             
             let amtTWD = currency === 'TWD' ? amtRaw : Math.round(amtRaw * travelData.rate);
             let rewardAmt = Math.round(amtTWD * (rewardRate / 100));
-            let amtTHB = currency === 'THB' ? amtRaw : Math.round(amtRaw / travelData.rate);
+            let amtForeign = currency === 'FOREIGN' ? amtRaw : Math.round(amtRaw / travelData.rate);
             
             travelData.expenses.push({ 
-                id: Date.now(), date, name, amt: amtTHB, amtTWD, method, payer, splitWith, note: note || "", cardType, rewardRate, rewardAmt 
+                id: Date.now(), date, name, amt: amtForeign, amtTWD, method, payer, splitWith, note: note || "", cardType, rewardRate, rewardAmt, currencyCode: travelData.targetCurrency
             });
             pushToCloud();
             
@@ -390,22 +460,19 @@
             if (idx === -1) return;
 
             if (!card.classList.contains('is-editing')) {
-                // 進入編輯模式
                 card.classList.add('is-editing');
                 btn.innerText = "💾";
                 card.querySelectorAll('.split-checkbox').forEach(cb => cb.removeAttribute('disabled'));
                 card.querySelectorAll('.editable-content').forEach(el => el.setAttribute('contenteditable', 'true'));
                 
-                // 如果原本沒有備註，顯示一個空的備註欄位供使用者點擊編輯
                 const noteBlock = card.querySelector('.note-block');
                 if (noteBlock.classList.contains('hidden')) {
                     noteBlock.classList.remove('hidden');
                 }
             } else {
-                // 儲存並退出編輯模式
                 const name = card.querySelector('.name-val').innerText.trim();
                 const date = card.querySelector('.date-val').innerText.trim();
-                const amtTHB = parseFloat(card.querySelector('.thb-val').innerText.replace(/[^\d.]/g, '')) || 0;
+                const amtForeign = parseFloat(card.querySelector('.foreign-val').innerText.replace(/[^\d.]/g, '')) || 0;
                 const amtTWD = parseFloat(card.querySelector('.twd-val').innerText.replace(/[^\d.]/g, '')) || 0;
                 const rewardRate = parseFloat(card.querySelector('.reward-rate-val').innerText.trim()) || 0;
                 const note = card.querySelector('.note-val').innerText.trim();
@@ -419,7 +486,7 @@
 
                 travelData.expenses[idx].name = name;
                 travelData.expenses[idx].date = date;
-                travelData.expenses[idx].amt = amtTHB;
+                travelData.expenses[idx].amt = amtForeign;
                 travelData.expenses[idx].amtTWD = amtTWD;
                 travelData.expenses[idx].rewardRate = rewardRate;
                 travelData.expenses[idx].rewardAmt = rewardAmt;
@@ -443,7 +510,7 @@
             }
         };
 
-        // 渲染記帳清單 (已補上備註與即時編輯功能)
+        // 渲染記帳清單
         window.renderExpenses = () => {
             const historyDiv = document.getElementById('expenseHistory');
             const filterDate = document.getElementById('dateFilter').value || 'all';
@@ -451,15 +518,20 @@
             const exps = travelData.expenses || [];
             
             let filtered = exps;
-            if (filterDate !== 'all') {
-                filtered = filtered.filter(e => e.date === filterDate);
-            }
-            if (filterPayer !== 'all') {
-                filtered = filtered.filter(e => e.payer === filterPayer);
-            }
+            if (filterDate !== 'all') { filtered = filtered.filter(e => e.date === filterDate); }
+            if (filterPayer !== 'all') { filtered = filtered.filter(e => e.payer === filterPayer); }
             
+            const symbols = { 
+                "THB": "฿", "JPY": "¥", "KRW": "₩", "USD": "$", "EUR": "€", 
+                "TWD": "$", "CNY": "¥", "HKD": "$", "SGD": "$", "GBP": "£", 
+                "AUD": "$", "CAD": "$", "VND": "₫", "PHP": "₱", "MYR": "RM" 
+            };
             const sorted = filtered.sort((a,b) => b.date.localeCompare(a.date) || b.id - a.id);
-            historyDiv.innerHTML = sorted.map(e => `
+            
+            historyDiv.innerHTML = sorted.map(e => {
+                const cCode = e.currencyCode || "THB";
+                const cSymbol = symbols[cCode] || cCode;
+                return `
                 <div id="exp-card-${e.id}" class="bg-white p-6 rounded-2xl shadow-md border border-stone-200 text-lg mb-4">
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex-1">
@@ -472,10 +544,10 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4 bg-stone-50 p-6 rounded-xl font-bold">
-                        <div>泰銖 ฿ <span class="editable-content thb-val text-2xl font-mono">${e.amt}</span></div>
+                        <div>外幣 ${cSymbol} (<span class="text-sm font-normal">${cCode}</span>) <span class="editable-content foreign-val text-2xl font-mono">${e.amt}</span></div>
                         <div class="text-blue-600 text-right">台幣 $ <span class="editable-content twd-val text-2xl font-mono">${e.amtTWD}</span></div>
                         <div class="text-stone-500 col-span-2 border-t pt-4 mt-2">
-                            臨時卡刷：${e.cardType} (<span class="editable-content reward-rate-val">${e.rewardRate}</span>%) 
+                            回饋卡刷：${e.cardType || "現金"} (<span class="editable-content reward-rate-val">${e.rewardRate || 0}</span>%) 
                             <span class="ml-4 text-green-600">回饋省下: $<span class="reward-amt-val">${e.rewardAmt || 0}</span></span>
                         </div>
                         <div class="col-span-2 italic text-stone-500 border-t pt-4 flex flex-wrap gap-4 items-center">
@@ -486,15 +558,14 @@
                                 </label>`).join('')}
                         </div>
                     </div>
-                    <!-- 💡 備註顯示與編輯區塊 -->
                     <div class="note-block mt-4 text-stone-600 text-base italic pl-2 border-l-4 border-amber-300 ${e.note ? '' : 'hidden'}">
                         <span>💡 備註：</span><span class="editable-content note-val font-normal not-italic">${e.note || ""}</span>
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
             calculateSettlement();
         };
 
-        // 核心計算結算邏輯
         window.calculateSettlement = () => {
             let totalGroupTwd = 0; let totalRewardSaved = 0; 
             let paidMap = {};      
@@ -579,16 +650,15 @@
             finalDiv.innerHTML = settlementHTML + `</div></div>`;
         };
 
-        // LINE 文字報表輸出
         window.copyLineReport = () => {
-            let text = `🧸 泰國之旅 費用結算報表 ✈️💖\n`;
+            let text = `🧸 旅遊費用結算報表 ✈️💖\n`;
             text += `=========================\n`;
             
             let totalGroupTwd = 0;
             let paidMap = {}; let rewardMap = {};
-            let groupShareMap = {}; let personalBuyMap = {};
+            let personalAllMap = {}; let groupShareMap = {}; let personalBuyMap = {};
             
-            travelData.members.forEach(m => { groupShareMap[m] = 0; personalBuyMap[m] = 0; });
+            travelData.members.forEach(m => { personalAllMap[m] = 0; groupShareMap[m] = 0; personalBuyMap[m] = 0; });
             travelData.payers.forEach(p => { paidMap[p] = 0; rewardMap[p] = 0; });
             
             travelData.expenses.forEach(e => {
@@ -603,6 +673,7 @@
                 if(splitWith.length > 0) {
                     const share = netTwd / splitWith.length;
                     splitWith.forEach(m => {
+                        personalAllMap[m] = (personalAllMap[m] || 0) + share;
                         if(m.includes('代購')) {
                             personalBuyMap[m] = (personalBuyMap[m] || 0) + share;
                         } else {
@@ -619,13 +690,28 @@
                 const purePaid = (paidMap[p]||0) - (rewardMap[p]||0);
                 const pBuy = personalBuyMap[p+'代購'] || 0;
                 const bal = Math.round(purePaid - groupShareMap[p] - pBuy);
+                
+                // 1. 原本項目維持
                 text += ` 👤 ${p} ➜ ${bal >= 0 ? '【應收】' : '【應付】'} $${Math.abs(bal).toLocaleString()} TWD\n`;
+                // 2. 新增個人統計細項
+                text += `    [個人統計]\n`;
+                text += `    🔹 個人總負擔 (含應負及專屬): $${Math.round(personalAllMap[p] + pBuy).toLocaleString()} TWD\n`;
+                text += `    🔹 個人應負團費分攤: $${Math.round(groupShareMap[p]).toLocaleString()} TWD\n`;
+                text += `    🔹 實際代墊出資(扣回饋): $${Math.round(purePaid).toLocaleString()} TWD\n`;
+                text += `    🔹 專屬個人代購支出: $${Math.round(pBuy).toLocaleString()} TWD\n`;
+                text += `    ---------------------------------\n`;
             });
             
             text += `\n📝【詳細帳目明細】\n`;
             const sortedExps = [...travelData.expenses].sort((a,b) => a.date.localeCompare(b.date));
+            const symbols = { 
+                "THB": "฿", "JPY": "¥", "KRW": "₩", "USD": "$", "EUR": "€", 
+                "TWD": "$", "CNY": "¥", "HKD": "$", "SGD": "$", "GBP": "£", 
+                "AUD": "$", "CAD": "$", "VND": "₫", "PHP": "₱", "MYR": "RM" 
+            };
             sortedExps.forEach(e => {
-                text += ` ▪️ [${e.date}] ${e.name} : ฿${e.amt} (約$${e.amtTWD} TWD) -> 由 ${e.payer} 支付\n`;
+                const cSymbol = symbols[e.currencyCode || "THB"] || "外幣";
+                text += ` ▪️ [${e.date}] ${e.name} : ${cSymbol}${e.amt} (約$${e.amtTWD} TWD) -> 由 ${e.payer} 支付\n`;
                 text += `   分攤對象: ${(e.splitWith || []).join(', ')}\n`;
                 if(e.note) text += `   💡 備註: ${e.note}\n`;
             });
@@ -637,7 +723,6 @@
             });
         };
 
-        // 行程規劃功能區
         window.addRow = () => { 
             const d = new Date().toISOString().split('T')[0]; 
             travelData.itinerary.push({ date: d, time: "09:00", trans: "🚶", location: "新景點名稱", mapUrl: "", amount: 0 }); 
