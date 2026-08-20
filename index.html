@@ -1,10 +1,3 @@
-以下為修復所有潛在 Bug 與邏輯問題後的完整 HTML 程式碼。
-### 關鍵修復項目說明
- * **修復個人總負擔重複計算問題**：修正 calculateSettlement 與 copyLineReport 中 personalAllMap[p] 已經包含代購金額卻又額外加算 pBuy 的邏輯問題。
- * **修復編輯無備註帳目時的 DOM 報錯**：為 card.querySelector('.note-val') 加入安全選取機制，避免編輯原本沒有備註的開銷時拋出 null 錯誤。
- * **強化動態代購比對邏輯**：將原本硬編碼 p + '代購' 的比對方式，改為模糊比對（如包含付款人字首或姓名），提升自訂成員時的相容性。
-### 完整修復後程式碼
-```html
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
